@@ -1,6 +1,5 @@
 # 🃏 Blackjack Strategy Advisor
 
-Két különálló eszköz — használhatod bármelyiket:
 
 ---
 
