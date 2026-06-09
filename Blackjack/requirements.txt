@@ -1,0 +1,17 @@
+# Blackjack Overlay - Python függőségek
+# Telepítés: pip install -r requirements.txt
+
+# Kötelező (manuális mód)
+pillow>=10.0.0
+
+# OCR / Auto mód (opcionális)
+mss>=9.0.0
+pytesseract>=0.3.10
+numpy>=1.24.0
+opencv-python>=4.8.0
+
+# Megjegyzés:
+# A Tesseract OCR binárist is külön kell telepíteni:
+#   macOS:   brew install tesseract
+#   Ubuntu:  sudo apt install tesseract-ocr
+#   Windows: https://github.com/UB-Mannheim/tesseract/wiki

@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackjack Strategy Advisor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0ede8;
+    --muted: #888880;
+    --dim: #444440;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.12);
+    --green-border: rgba(34,197,94,0.3);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59,130,246,0.12);
+    --blue-border: rgba(59,130,246,0.3);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.12);
+    --amber-border: rgba(245,158,11,0.3);
+    --purple: #a855f7;
+    --purple-bg: rgba(168,85,247,0.12);
+    --purple-border: rgba(168,85,247,0.3);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.12);
+    --red-border: rgba(239,68,68,0.3);
+    --gold: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Felt texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      radial-gradient(ellipse at 20% 50%, rgba(34,197,94,0.03) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(59,130,246,0.03) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    grid-template-rows: auto auto auto 1fr;
+    gap: 16px;
+  }
+
+  /* Header */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .logo-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  .logo-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--green);
+    border: 1px solid var(--green-border);
+    background: var(--green-bg);
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 24px;
+  }
+
+  .header-stat {
+    text-align: right;
+  }
+
+  .header-stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .header-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .header-stat-val.positive { color: var(--green); }
+  .header-stat-val.negative { color: var(--red); }
+
+  /* Main table area */
+  .table-area {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    grid-column: 2;
+    grid-row: 2 / 5;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Action advice card */
+  .advice-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    transition: all 0.2s ease;
+  }
+
+  .advice-card.hit    { border-color: var(--green-border); background: var(--green-bg); }
+  .advice-card.stand  { border-color: var(--blue-border);  background: var(--blue-bg); }
+  .advice-card.double { border-color: var(--amber-border); background: var(--amber-bg); }
+  .advice-card.split  { border-color: var(--purple-border);background: var(--purple-bg);}
+  .advice-card.surrender { border-color: var(--red-border); background: var(--red-bg); }
+  .advice-card.blackjack { border-color: var(--gold); background: rgba(245,158,11,0.1); }
+
+  .advice-action {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 3px;
+    line-height: 1;
+    margin-bottom: 8px;
+    transition: color 0.2s;
+  }
+
+  .advice-card.hit    .advice-action { color: var(--green); }
+  .advice-card.stand  .advice-action { color: var(--blue); }
+  .advice-card.double .advice-action { color: var(--amber); }
+  .advice-card.split  .advice-action { color: var(--purple); }
+  .advice-card.surrender .advice-action { color: var(--red); }
+  .advice-card.blackjack .advice-action { color: var(--gold); }
+
+  .advice-sub {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .advice-empty {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    padding: 12px 0;
+  }
+
+  /* Hand info */
+  .hand-info {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .info-item { }
+  .info-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .info-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .info-val.bust { color: var(--red); }
+  .info-val.bj   { color: var(--gold); }
+
+  /* Card input zones */
+  .zone {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .zone-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .cards-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    min-height: 72px;
+  }
+
+  .playing-card {
+    position: relative;
+    width: 48px;
+    height: 68px;
+    background: #fafaf8;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 4px 5px;
+    cursor: default;
+    flex-shrink: 0;
+    animation: cardDeal 0.2s ease;
+  }
+
+  @keyframes cardDeal {
+    from { transform: translateY(-8px) scale(0.92); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .playing-card.red-card { color: #c0392b; }
+  .playing-card.black-card { color: #1a1a1a; }
+
+  .card-rank {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .card-suit {
+    font-size: 11px;
+    line-height: 1;
+    margin-top: 1px;
+  }
+
+  .card-center {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    font-size: 18px;
+    opacity: 0.15;
+  }
+
+  .card-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 9px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .playing-card:hover .card-remove { opacity: 1; }
+  .card-remove:hover { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+
+  .add-card-btn {
+    width: 48px;
+    height: 68px;
+    border: 1px dashed var(--dim);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    color: var(--dim);
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .add-card-btn:hover {
+    border-color: var(--border2);
+    color: var(--muted);
+    background: var(--surface2);
+  }
+
+  /* Card picker */
+  .picker-wrap {
+    margin-top: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 12px;
+    display: none;
+    animation: fadeIn 0.15s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .picker-wrap.open { display: block; }
+
+  .picker-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .picker-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .pick-btn {
+    padding: 6px 2px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: center;
+    transition: all 0.1s;
+  }
+
+  .pick-btn:hover {
+    border-color: var(--border2);
+    background: var(--surface2);
+    transform: scale(1.05);
+  }
+
+  /* Suit selector */
+  .suit-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .suit-btn {
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.1s;
+  }
+
+  .suit-btn:hover { background: var(--surface2); border-color: var(--border2); }
+  .suit-btn.active-suit { border-color: var(--border2); background: var(--surface2); }
+
+  /* Strategy reference table */
+  .strat-section {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .section-head {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 12px;
+  }
+
+  .tab-btn {
+    padding: 5px 14px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    transition: all 0.1s;
+  }
+
+  .tab-btn.active {
+    background: var(--surface2);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+
+  .tab-btn:hover:not(.active) {
+    border-color: var(--border2);
+    color: var(--text);
+  }
+
+  .strat-table-wrap {
+    overflow-x: auto;
+  }
+
+  .strat-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 11px;
+  }
+
+  .strat-table th,
+  .strat-table td {
+    padding: 5px 6px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+
+  .strat-table th {
+    background: var(--surface2);
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .strat-table .row-head {
+    background: var(--surface2);
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--muted);
+    text-align: left;
+    padding-left: 8px;
+  }
+
+  .strat-table td.h { background: rgba(34,197,94,0.15);  color: #4ade80; font-weight: 500; }
+  .strat-table td.s { background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 500; }
+  .strat-table td.d { background: rgba(245,158,11,0.15); color: #fbbf24; font-weight: 500; }
+  .strat-table td.p { background: rgba(168,85,247,0.15); color: #c084fc; font-weight: 500; }
+  .strat-table td.r { background: rgba(239,68,68,0.15);  color: #f87171; font-weight: 500; }
+
+  /* Highlighted current situation */
+  .strat-table tr.highlight-row td,
+  .strat-table tr.highlight-row th { outline: none; }
+  .strat-table td.highlight-cell {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+    z-index: 1;
+    position: relative;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .leg-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .leg-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* History log */
+  .history-section {
+    grid-column: 2;
+    padding: 0;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  .history-action {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    min-width: 60px;
+  }
+
+  .history-action.hit    { color: var(--green); }
+  .history-action.stand  { color: var(--blue); }
+  .history-action.double { color: var(--amber); }
+  .history-action.split  { color: var(--purple); }
+  .history-action.surrender { color: var(--red); }
+
+  .history-detail { color: var(--muted); flex: 1; }
+
+  .history-empty {
+    font-size: 12px;
+    color: var(--dim);
+    text-align: center;
+    padding: 16px;
+  }
+
+  /* Bottom actions */
+  .bottom-row {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 8px 20px;
+    border-radius: 3px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn:hover { background: var(--surface2); border-color: rgba(255,255,255,0.3); }
+
+  .btn.primary {
+    background: rgba(34,197,94,0.1);
+    border-color: var(--green-border);
+    color: var(--green);
+  }
+
+  .btn.primary:hover { background: rgba(34,197,94,0.2); }
+
+  .btn.danger {
+    background: rgba(239,68,68,0.1);
+    border-color: var(--red-border);
+    color: var(--red);
+  }
+
+  .btn.danger:hover { background: rgba(239,68,68,0.2); }
+
+  .kbd {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    padding: 1px 5px;
+    color: var(--muted);
+  }
+
+  /* Keyboard shortcut hints */
+  .shortcuts {
+    margin-left: auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--dim);
+  }
+
+  .shortcut-item { display: flex; align-items: center; gap: 4px; }
+
+  /* Deck tracker */
+  .deck-section {
+    grid-column: 2;
+  }
+
+  .deck-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+
+  .deck-val {
+    text-align: center;
+    padding: 4px 2px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--surface);
+  }
+
+  .deck-rank {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .deck-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-top: 1px;
+  }
+
+  .deck-count.low { color: var(--red); }
+  .deck-count.high { color: var(--green); }
+
+  /* Running count */
+  .count-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 8px;
+  }
+
+  .count-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .count-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .count-val.positive { color: var(--green); }
+  .count-val.negative { color: var(--red); }
+
+  .count-true {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+  /* Toast notification */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    transition: transform 0.25s ease;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Tab content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .section-divider {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <span class="logo-title">Blackjack Advisor</span>
+      <span class="logo-badge">BASIC STRATEGY</span>
+    </div>
+    <div class="header-stats">
+      <div class="header-stat">
+        <div class="header-stat-label">Kezek</div>
+        <div class="header-stat-val" id="stat-hands">0</div>
+      </div>
+      <div class="header-stat">
+        <div class="header-stat-label">Helyes dönt.</div>
+        <div class="header-stat-val positive" id="stat-correct">—</div>
+      </div>
+      <div class="header-stat">
+        <div class="header-stat-label">Running count</div>
+        <div class="header-stat-val" id="stat-count">0</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main input area -->
+  <div class="table-area">
+    <!-- Player zone -->
+    <div class="zone">
+      <div class="zone-label">A te lapjaid</div>
+      <div class="cards-row" id="player-row"></div>
+      <div class="picker-wrap" id="player-picker">
+        <div class="picker-label">Válassz lapot</div>
+        <div class="picker-grid" id="player-picker-grid"></div>
+        <div class="suit-row" id="player-suit-row"></div>
+      </div>
+    </div>
+
+    <!-- Dealer zone -->
+    <div class="zone">
+      <div class="zone-label">Dealer felső lapja</div>
+      <div class="cards-row" id="dealer-row"></div>
+      <div class="picker-wrap" id="dealer-picker">
+        <div class="picker-label">Válassz lapot</div>
+        <div class="picker-grid" id="dealer-picker-grid"></div>
+        <div class="suit-row" id="dealer-suit-row"></div>
+      </div>
+    </div>
+
+    <!-- Hand info -->
+    <div class="hand-info" id="hand-info">
+      <div class="info-item">
+        <div class="info-label">Kéz értéke</div>
+        <div class="info-val" id="info-val">—</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Típus</div>
+        <div class="info-val" id="info-type">—</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Dealer</div>
+        <div class="info-val" id="info-dealer">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Advice -->
+    <div class="advice-card" id="advice-card">
+      <div class="advice-empty" id="advice-empty">Add meg a lapjaidat és a dealer lapját</div>
+      <div id="advice-content" style="display:none">
+        <div class="advice-action" id="advice-action">—</div>
+        <div class="advice-sub" id="advice-sub"></div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div>
+      <div class="section-head">Döntési napló</div>
+      <div class="history-list" id="history-list">
+        <div class="history-empty">Még nincs döntés</div>
+      </div>
+    </div>
+
+    <!-- Card count -->
+    <div>
+      <div class="section-head">Hi-Lo kártyaszámlálás</div>
+      <div class="count-display">
+        <div>
+          <div class="count-label">Running</div>
+          <div class="count-val" id="running-count">0</div>
+        </div>
+        <div class="count-true">
+          <div class="count-label">True count</div>
+          <div class="count-val" id="true-count">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy table -->
+  <div class="strat-section">
+    <div class="section-head">Referencia táblázat</div>
+    <div class="table-tabs">
+      <button class="tab-btn active" onclick="switchTab('hard')">Kemény kezek</button>
+      <button class="tab-btn" onclick="switchTab('soft')">Puha kezek</button>
+      <button class="tab-btn" onclick="switchTab('pairs')">Párok</button>
+    </div>
+    <div class="tab-content active" id="tab-hard">
+      <div class="strat-table-wrap" id="hard-table-wrap"></div>
+    </div>
+    <div class="tab-content" id="tab-soft">
+      <div class="strat-table-wrap" id="soft-table-wrap"></div>
+    </div>
+    <div class="tab-content" id="tab-pairs">
+      <div class="strat-table-wrap" id="pairs-table-wrap"></div>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(34,197,94,0.4)"></div>H – Hit</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(59,130,246,0.4)"></div>S – Stand</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(245,158,11,0.4)"></div>D – Double</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(168,85,247,0.4)"></div>P – Split</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(239,68,68,0.4)"></div>R – Surrender</div>
+    </div>
+  </div>
+
+  <!-- Bottom actions -->
+  <div class="bottom-row">
+    <button class="btn primary" onclick="logDecision()">Döntés rögzítése <span class="kbd">Enter</span></button>
+    <button class="btn" onclick="clearHand()">Új kéz <span class="kbd">N</span></button>
+    <button class="btn danger" onclick="fullReset()">Mindent töröl <span class="kbd">R</span></button>
+    <div class="shortcuts">
+      <span class="shortcut-item"><span class="kbd">P</span> Player lap</span>
+      <span class="shortcut-item"><span class="kbd">D</span> Dealer lap</span>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RED_SUITS  = ['♥','♦'];
+const BLACK_SUITS = ['♠','♣'];
+const SUIT_CYCLE = ['♠','♥','♦','♣'];
+
+let playerCards = [];
+let dealerCard = null;
+let playerSuit = '♠';
+let dealerSuit = '♠';
+let playerPickerOpen = false;
+let dealerPickerOpen = false;
+let handCount = 0;
+let correctCount = 0;
+let historyLog = [];
+let runningCount = 0;
+let decksRemaining = 6;
+
+// Hi-Lo values
+const hiloVal = r => {
+  if(['2','3','4','5','6'].includes(r)) return 1;
+  if(['10','J','Q','K','A'].includes(r)) return -1;
+  return 0;
+};
+
+// Strategy tables
+const hardTable = {
+  5: {2:'H',3:'H',4:'H',5:'H',6:'H',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  6: {2:'H',3:'H',4:'H',5:'H',6:'H',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  7: {2:'H',3:'H',4:'H',5:'H',6:'H',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  8: {2:'H',3:'H',4:'H',5:'H',6:'H',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  9: {2:'H',3:'D',4:'D',5:'D',6:'D',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  10:{2:'D',3:'D',4:'D',5:'D',6:'D',7:'D',8:'D',9:'D',10:'H',A:'H'},
+  11:{2:'D',3:'D',4:'D',5:'D',6:'D',7:'D',8:'D',9:'D',10:'D',A:'D'},
+  12:{2:'H',3:'H',4:'S',5:'S',6:'S',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  13:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  14:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  15:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'H',8:'H',9:'R',10:'R',A:'R'},
+  16:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'H',8:'R',9:'R',10:'R',A:'R'},
+  17:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+  18:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+  19:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+  20:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+  21:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+};
+
+const softTable = {
+  13:{2:'H',3:'H',4:'H',5:'D',6:'D',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  14:{2:'H',3:'H',4:'H',5:'D',6:'D',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  15:{2:'H',3:'H',4:'D',5:'D',6:'D',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  16:{2:'H',3:'H',4:'D',5:'D',6:'D',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  17:{2:'H',3:'D',4:'D',5:'D',6:'D',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  18:{2:'S',3:'D',4:'D',5:'D',6:'D',7:'S',8:'S',9:'H',10:'H',A:'H'},
+  19:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+  20:{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+};
+
+const pairTable = {
+  'A':{2:'P',3:'P',4:'P',5:'P',6:'P',7:'P',8:'P',9:'P',10:'P',A:'P'},
+  '10':{2:'S',3:'S',4:'S',5:'S',6:'S',7:'S',8:'S',9:'S',10:'S',A:'S'},
+  '9':{2:'P',3:'P',4:'P',5:'P',6:'P',7:'S',8:'P',9:'P',10:'S',A:'S'},
+  '8':{2:'P',3:'P',4:'P',5:'P',6:'P',7:'P',8:'P',9:'P',10:'P',A:'P'},
+  '7':{2:'P',3:'P',4:'P',5:'P',6:'P',7:'P',8:'H',9:'H',10:'H',A:'H'},
+  '6':{2:'P',3:'P',4:'P',5:'P',6:'P',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  '5':{2:'D',3:'D',4:'D',5:'D',6:'D',7:'D',8:'D',9:'D',10:'H',A:'H'},
+  '4':{2:'H',3:'H',4:'H',5:'P',6:'P',7:'H',8:'H',9:'H',10:'H',A:'H'},
+  '3':{2:'P',3:'P',4:'P',5:'P',6:'P',7:'P',8:'H',9:'H',10:'H',A:'H'},
+  '2':{2:'P',3:'P',4:'P',5:'P',6:'P',7:'P',8:'H',9:'H',10:'H',A:'H'},
+};
+
+const actionText = {
+  H: {label:'HIT', sub:'Húzz még egy lapot — statisztikailag ez a legjobb lépés.', cls:'hit'},
+  S: {label:'STAND', sub:'Megállsz — a kezed elég erős, ne kockáztass.', cls:'stand'},
+  D: {label:'DOUBLE DOWN', sub:'Duplázd meg a téted, pontosan egy lap jár.', cls:'double'},
+  P: {label:'SPLIT', sub:'Osztd ketté a párod — két önálló kéz.', cls:'split'},
+  R: {label:'SURRENDER', sub:'Add fel a kezed — visszakapsz a tét felét. Ha nem elérhető: Hit.', cls:'surrender'},
+};
+
+function cardValue(r) {
+  if(r==='A') return 11;
+  if(['10','J','Q','K'].includes(r)) return 10;
+  return parseInt(r);
+}
+
+function calcHand(cards) {
+  let aces = cards.filter(c=>c==='A').length;
+  let sum = cards.reduce((a,c)=>a+cardValue(c),0);
+  while(sum>21 && aces>0){sum-=10;aces--;}
+  return sum;
+}
+
+function isSoft(cards) {
+  if(!cards.includes('A')) return false;
+  const otherSum = cards.filter(c=>c!=='A').reduce((a,c)=>a+cardValue(c),0);
+  return otherSum + 11 <= 21;
+}
+
+function isPair(cards) {
+  if(cards.length!==2) return false;
+  const norm = r => ['10','J','Q','K'].includes(r)?'10':r;
+  return norm(cards[0])===norm(cards[1]);
+}
+
+function getAdvice(pCards, dCard) {
+  if(!pCards||pCards.length<2||!dCard) return null;
+  const dk = ['J','Q','K'].includes(dCard)?'10':dCard;
+  const hv = calcHand(pCards);
+  if(hv>21) return {action:'BUST',label:'BUST',sub:'Túl sok — kimentél.',cls:'surrender',raw:null};
+  if(hv===21&&pCards.length===2) return {action:'BJ',label:'BLACKJACK!',sub:'Természetes blackjack — +1.5x tét!',cls:'blackjack',raw:null};
+  if(isPair(pCards)){
+    const pr = ['10','J','Q','K'].includes(pCards[0])?'10':pCards[0];
+    const a = pairTable[pr]?.[dk]||'H';
+    return {...actionText[a], action:a, raw:{type:'pair',key:pr,dk}};
+  }
+  if(isSoft(pCards)){
+    const sv = calcHand(pCards);
+    const a = softTable[sv]?.[dk]||(hardTable[Math.min(sv,21)]?.[dk]||'H');
+    return {...actionText[a], action:a, raw:{type:'soft',key:sv,dk}};
+  }
+  const hk = Math.min(Math.max(hv,5),21);
+  const a = hardTable[hk]?.[dk]||'S';
+  return {...actionText[a], action:a, raw:{type:'hard',key:hk,dk}};
+}
+
+function renderCard(rank, suit, onRemove) {
+  const isRed = RED_SUITS.includes(suit);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'playing-card '+(isRed?'red-card':'black-card');
+
+  const rankEl = document.createElement('div');
+  rankEl.className = 'card-rank';
+  rankEl.textContent = rank;
+
+  const suitEl = document.createElement('div');
+  suitEl.className = 'card-suit';
+  suitEl.textContent = suit;
+
+  const center = document.createElement('div');
+  center.className = 'card-center';
+  center.textContent = suit;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'card-remove';
+  removeBtn.textContent = '×';
+  removeBtn.title = 'Eltávolít';
+  removeBtn.onclick = onRemove;
+
+  wrapper.appendChild(rankEl);
+  wrapper.appendChild(suitEl);
+  wrapper.appendChild(center);
+  wrapper.appendChild(removeBtn);
+  return wrapper;
+}
+
+function buildPicker(gridId, suitRowId, currentSuit, onPickRank, onPickSuit) {
+  const grid = document.getElementById(gridId);
+  const sRow = document.getElementById(suitRowId);
+  grid.innerHTML = '';
+  sRow.innerHTML = '';
+
+  RANKS.forEach(r => {
+    const b = document.createElement('button');
+    b.className = 'pick-btn';
+    b.textContent = r;
+    b.onclick = () => onPickRank(r);
+    grid.appendChild(b);
+  });
+
+  SUIT_CYCLE.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'suit-btn' + (s===currentSuit?' active-suit':'');
+    b.textContent = s;
+    b.onclick = () => onPickSuit(s);
+    sRow.appendChild(b);
+  });
+}
+
+function renderPlayerArea() {
+  const row = document.getElementById('player-row');
+  row.innerHTML = '';
+
+  playerCards.forEach((c,i) => {
+    const el = renderCard(c.rank, c.suit, () => {
+      runningCount -= hiloVal(c.rank);
+      playerCards.splice(i,1);
+      renderAll();
+    });
+    row.appendChild(el);
+  });
+
+  if(playerCards.length < 8) {
+    const btn = document.createElement('button');
+    btn.className = 'add-card-btn';
+    btn.textContent = '+';
+    btn.title = 'Lap hozzáadása (P)';
+    btn.onclick = () => { playerPickerOpen=!playerPickerOpen; dealerPickerOpen=false; renderAll(); };
+    row.appendChild(btn);
+  }
+
+  const picker = document.getElementById('player-picker');
+  picker.classList.toggle('open', playerPickerOpen);
+  if(playerPickerOpen) {
+    buildPicker('player-picker-grid','player-suit-row', playerSuit,
+      (r) => {
+        playerCards.push({rank:r, suit:playerSuit});
+        runningCount += hiloVal(r);
+        playerPickerOpen = false;
+        renderAll();
+      },
+      (s) => { playerSuit=s; renderAll(); }
+    );
+  }
+}
+
+function renderDealerArea() {
+  const row = document.getElementById('dealer-row');
+  row.innerHTML = '';
+
+  if(dealerCard) {
+    const el = renderCard(dealerCard.rank, dealerCard.suit, () => {
+      runningCount -= hiloVal(dealerCard.rank);
+      dealerCard = null;
+      dealerPickerOpen = false;
+      renderAll();
+    });
+    row.appendChild(el);
+  } else {
+    const btn = document.createElement('button');
+    btn.className = 'add-card-btn';
+    btn.textContent = '+';
+    btn.title = 'Dealer lap (D)';
+    btn.onclick = () => { dealerPickerOpen=!dealerPickerOpen; playerPickerOpen=false; renderAll(); };
+    row.appendChild(btn);
+  }
+
+  const picker = document.getElementById('dealer-picker');
+  picker.classList.toggle('open', dealerPickerOpen);
+  if(dealerPickerOpen) {
+    buildPicker('dealer-picker-grid','dealer-suit-row', dealerSuit,
+      (r) => {
+        if(dealerCard) runningCount -= hiloVal(dealerCard.rank);
+        dealerCard = {rank:r, suit:dealerSuit};
+        runningCount += hiloVal(r);
+        dealerPickerOpen = false;
+        renderAll();
+      },
+      (s) => { dealerSuit=s; renderAll(); }
+    );
+  }
+}
+
+function renderAdvice() {
+  const pRanks = playerCards.map(c=>c.rank);
+  const dRank = dealerCard?.rank;
+  const adv = getAdvice(pRanks, dRank);
+
+  const card = document.getElementById('advice-card');
+  const empty = document.getElementById('advice-empty');
+  const content = document.getElementById('advice-content');
+  const actionEl = document.getElementById('advice-action');
+  const subEl = document.getElementById('advice-sub');
+
+  card.className = 'advice-card';
+
+  if(!adv) {
+    empty.style.display='block';
+    content.style.display='none';
+    return;
+  }
+
+  empty.style.display='none';
+  content.style.display='block';
+  card.classList.add(adv.cls);
+  actionEl.textContent = adv.label;
+  subEl.textContent = adv.sub;
+}
+
+function renderHandInfo() {
+  const pRanks = playerCards.map(c=>c.rank);
+  const hv = pRanks.length>0 ? calcHand(pRanks) : null;
+
+  const valEl = document.getElementById('info-val');
+  const typeEl = document.getElementById('info-type');
+  const dEl = document.getElementById('info-dealer');
+
+  valEl.className = 'info-val';
+  if(hv===null){valEl.textContent='—';}
+  else if(hv>21){valEl.textContent='BUST';valEl.classList.add('bust');}
+  else if(hv===21&&pRanks.length===2){valEl.textContent='BJ';valEl.classList.add('bj');}
+  else{valEl.textContent=hv;}
+
+  if(pRanks.length>=2) {
+    if(isPair(pRanks)) typeEl.textContent='Pár';
+    else if(isSoft(pRanks)) typeEl.textContent='Puha';
+    else typeEl.textContent='Kemény';
+  } else { typeEl.textContent='—'; }
+
+  dEl.textContent = dealerCard ? dealerCard.rank : '—';
+}
+
+function renderCounts() {
+  const rc = runningCount;
+  const tc = decksRemaining>0 ? (runningCount/decksRemaining).toFixed(1) : '—';
+
+  document.getElementById('running-count').textContent = rc>0?'+'+rc:rc;
+  document.getElementById('running-count').className = 'count-val '+(rc>0?'positive':rc<0?'negative':'');
+  document.getElementById('true-count').textContent = typeof tc==='string'?tc:(parseFloat(tc)>0?'+'+tc:tc);
+  document.getElementById('true-count').className = 'count-val '+(parseFloat(tc)>0?'positive':parseFloat(tc)<0?'negative':'');
+  document.getElementById('stat-count').textContent = rc>0?'+'+rc:rc;
+  document.getElementById('stat-count').className = 'header-stat-val '+(rc>0?'positive':rc<0?'negative':'');
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if(historyLog.length===0){
+    list.innerHTML='<div class="history-empty">Még nincs döntés</div>';
+    return;
+  }
+  list.innerHTML = historyLog.slice(-12).reverse().map(h=>`
+    <div class="history-item">
+      <span class="history-action ${h.cls}">${h.action}</span>
+      <span class="history-detail">${h.detail}</span>
+    </div>
+  `).join('');
+}
+
+function renderStratTables() {
+  const dealers = ['2','3','4','5','6','7','8','9','10','A'];
+  const pRanks = playerCards.map(c=>c.rank);
+  const dRank = dealerCard?.rank;
+  const adv = getAdvice(pRanks, dRank);
+
+  function makeTable(rows, lookup, rowLabel) {
+    let html = '<table class="strat-table"><thead><tr><th>'+rowLabel+'</th>';
+    dealers.forEach(d=>html+=`<th>${d}</th>`);
+    html += '</tr></thead><tbody>';
+    rows.forEach(({key,label})=>{
+      const isHighlight = adv?.raw && adv.raw.key===key && (adv.raw.type==='hard'||adv.raw.type==='soft'||adv.raw.type==='pair');
+      html += `<tr${isHighlight?' class="highlight-row"':''}>`;
+      html += `<td class="row-head">${label||key}</td>`;
+      dealers.forEach(d=>{
+        const a = lookup(key,d);
+        const isCell = isHighlight && adv?.raw?.dk===d;
+        html += `<td class="${a.toLowerCase()+(isCell?' highlight-cell':'')}">${a}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  const hardRows = [8,9,10,11,12,13,14,15,16,17,18,19,20].map(k=>({key:k,label:k}));
+  document.getElementById('hard-table-wrap').innerHTML = makeTable(
+    hardRows,
+    (k,d)=>(hardTable[k]?.[d]||'S'),
+    'Kemény'
+  );
+
+  const softRows = [13,14,15,16,17,18,19,20].map(k=>({key:k,label:`A+${k-11}`}));
+  document.getElementById('soft-table-wrap').innerHTML = makeTable(
+    softRows,
+    (k,d)=>(softTable[k]?.[d]||'H'),
+    'Puha'
+  );
+
+  const pairRows = ['A','10','9','8','7','6','5','4','3','2'].map(k=>({key:k,label:`${k}+${k}`}));
+  document.getElementById('pairs-table-wrap').innerHTML = makeTable(
+    pairRows,
+    (k,d)=>(pairTable[k]?.[d]||'H'),
+    'Pár'
+  );
+}
+
+function renderAll() {
+  renderPlayerArea();
+  renderDealerArea();
+  renderAdvice();
+  renderHandInfo();
+  renderCounts();
+  renderHistory();
+  renderStratTables();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', ['hard','soft','pairs'][i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach((c,i)=>{
+    c.classList.toggle('active', ['hard','soft','pairs'][i]===name);
+  });
+}
+
+function logDecision() {
+  const pRanks = playerCards.map(c=>c.rank);
+  const dRank = dealerCard?.rank;
+  const adv = getAdvice(pRanks, dRank);
+  if(!adv||adv.action==='BUST'||adv.action==='BJ') return;
+  handCount++;
+  historyLog.push({
+    action: adv.action,
+    cls: adv.cls,
+    detail: `${pRanks.join(',')} vs ${dRank||'?'}`
+  });
+  document.getElementById('stat-hands').textContent = handCount;
+  showToast('Döntés rögzítve: ' + adv.label);
+  renderHistory();
+}
+
+function clearHand() {
+  playerCards = [];
+  dealerCard = null;
+  playerPickerOpen = false;
+  dealerPickerOpen = false;
+  renderAll();
+}
+
+function fullReset() {
+  playerCards = []; dealerCard = null;
+  playerPickerOpen = false; dealerPickerOpen = false;
+  runningCount = 0; handCount = 0; correctCount = 0;
+  historyLog = [];
+  document.getElementById('stat-hands').textContent='0';
+  document.getElementById('stat-correct').textContent='—';
+  showToast('Mindent töröltünk');
+  renderAll();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key.toLowerCase()==='p'){ playerPickerOpen=!playerPickerOpen; dealerPickerOpen=false; renderAll(); }
+  if(e.key.toLowerCase()==='d'){ dealerPickerOpen=!dealerPickerOpen; playerPickerOpen=false; renderAll(); }
+  if(e.key.toLowerCase()==='n'){ clearHand(); }
+  if(e.key.toLowerCase()==='r' && !e.ctrlKey){ fullReset(); }
+  if(e.key==='Enter'){ logDecision(); }
+  if(e.key==='Escape'){ playerPickerOpen=false; dealerPickerOpen=false; renderAll(); }
+});
+
+// Init
+renderAll();
+</script>
+</body>
+</html>
