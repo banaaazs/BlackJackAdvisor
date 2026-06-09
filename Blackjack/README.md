@@ -87,7 +87,7 @@ Az alkalmazás a **Las Vegas Strip alapstratégiát** használja (6 pakli, deale
 | **P** | Split | Osztd ketté a párt |
 | **R** | Surrender | Add fel — kapsz vissza a tét felét |
 
-### Hi-Lo kártyaszámlálás
+### Hi-Lo kártyaszámlálás  (BETA, nem működik még helyesen)
 
 | Lapok | Érték |
 |-------|-------|
