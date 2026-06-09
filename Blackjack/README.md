@@ -69,7 +69,7 @@ Ha a Tesseract telepítve van, megjelenik az **"Auto OFF"** gomb.
 Kattints rá → **"Auto ON"** — a program 2 másodpercenként figyeli a képernyőt
 és automatikusan frissíti a stratégiát.
 
-> ⚠️ **Megjegyzés:** Az auto mód legjobban online kaszinó szoftvereken működik
+> **Megjegyzés:** Az auto mód legjobban online kaszinó szoftvereken működik
 > ahol a lapok számai tisztán láthatóak a képernyőn. A pontosság függ a
 > kaszinó grafikai stílusától.
 
@@ -105,4 +105,4 @@ Az alkalmazás a **Las Vegas Strip alapstratégiát** használja (6 pakli, deale
 
 Ez az eszköz kizárólag **oktatási és szórakoztatási célra** készült.
 Az alapstratégia csökkenti a house edge-t ~0.5%-ra, de nem garantál nyereményt.
-Kérjük, felelősen játssz. 🙏
+Felelősen játssz. 🙏
